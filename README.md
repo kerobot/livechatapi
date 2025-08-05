@@ -39,8 +39,14 @@ Python 3.13.2
 > poetry add pydantic
 ```
 
+.env を作成してAPIキーを設定する
+
 ## 実行
 
 ```powershell
 > uvicorn app.main:app --reload
 ```
+
+http://127.0.0.1:8000/api/youtube/livechat?video_id=abcdefg
+http://127.0.0.1:8000/api/youtube/livechat?video_id=abcdefg&page_token=トークン値
+http://127.0.0.1:8000/docs
