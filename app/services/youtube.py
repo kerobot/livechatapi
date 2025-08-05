@@ -15,13 +15,12 @@ logger = logging.getLogger(__name__)
 
 class YouTubeService:
     def __init__(self):
-        # 設定ファイルから値を読み込むべき！
         self.client = RateLimitedHTTPClient(
-            max_retries=RATE_LIMIT_MAX_RETRIES,  # ← 修正
-            base_delay=RATE_LIMIT_BASE_DELAY,  # ← 修正
+            max_retries=RATE_LIMIT_MAX_RETRIES,
+            base_delay=RATE_LIMIT_BASE_DELAY,
         )
         self.last_request_time = 0
-        self.min_interval = 1.0 / RATE_LIMIT_REQUESTS_PER_SECOND  # ← 追加
+        self.min_interval = 1.0 / RATE_LIMIT_REQUESTS_PER_SECOND
         logger.info("🎬 YouTubeService initialized")
 
     def _wait_for_rate_limit(self):
