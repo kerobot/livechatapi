@@ -29,15 +29,15 @@ def handle_youtube_api_error(error: Exception) -> HTTPException:
 
     if "quota" in error_str:
         return HTTPException(
-            status_code=429, detail="YouTube APIのクォータを超過したよ〜"
+            status_code=429, detail="YouTube APIのクォータを超過しました。"
         )
     elif "forbidden" in error_str:
         return HTTPException(
-            status_code=403, detail="YouTube APIへのアクセスが拒否されたよ〜"
+            status_code=403, detail="YouTube APIへのアクセスが拒否されました。"
         )
     elif "not found" in error_str:
-        return HTTPException(status_code=404, detail="動画が見つからないよ〜")
+        return HTTPException(status_code=404, detail="動画が見つかりませんでした。")
     else:
         return HTTPException(
-            status_code=500, detail="YouTube APIでエラーが発生したよ〜"
+            status_code=500, detail="YouTube APIでエラーが発生しました。"
         )

@@ -45,7 +45,7 @@ class TestHandleYouTubeApiError:
 
         assert isinstance(result, HTTPException)
         assert result.status_code == 429
-        assert "クォータを超過したよ〜" in result.detail
+        assert "クォータを超過しました。" in result.detail
 
     def test_forbidden_error(self):
         """アクセス拒否エラーのテスト"""
@@ -54,7 +54,7 @@ class TestHandleYouTubeApiError:
 
         assert isinstance(result, HTTPException)
         assert result.status_code == 403
-        assert "アクセスが拒否されたよ〜" in result.detail
+        assert "アクセスが拒否されました。" in result.detail
 
     def test_not_found_error(self):
         """リソースが見つからないエラーのテスト"""
@@ -63,7 +63,7 @@ class TestHandleYouTubeApiError:
 
         assert isinstance(result, HTTPException)
         assert result.status_code == 404
-        assert "見つからないよ〜" in result.detail
+        assert "見つかりませんでした。" in result.detail
 
     def test_generic_error(self):
         """一般的なエラーのテスト"""
@@ -72,4 +72,4 @@ class TestHandleYouTubeApiError:
 
         assert isinstance(result, HTTPException)
         assert result.status_code == 500
-        assert "エラーが発生したよ〜" in result.detail
+        assert "エラーが発生しました。" in result.detail

@@ -30,10 +30,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=API_TITLE,  # 環境名が入る！
+    title=API_TITLE,  # 環境名が入る
     description="YouTubeライブチャット取得API",
-    version=API_VERSION,  # 環境別バージョン！
-    debug=DEBUG,  # 環境別デバッグモード！
+    version=API_VERSION,  # 環境別バージョン
+    debug=DEBUG,  # 環境別デバッグモード
     lifespan=lifespan,
 )
 

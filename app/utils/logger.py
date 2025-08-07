@@ -56,7 +56,7 @@ def setup_logger():
 
     # 環境別ファイルログレベル
     if ENVIRONMENT == "production":
-        file_handler.setLevel(logging.INFO)  # 本番でもファイルには詳細ログ
+        file_handler.setLevel(logging.INFO)
     else:
         file_handler.setLevel(logging.DEBUG)
 
