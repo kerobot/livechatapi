@@ -2,7 +2,7 @@ import time
 import random
 import requests
 from typing import Optional, Dict, Any
-from app.config import ENVIRONMENT  # ← 追加
+from app.config import ENVIRONMENT
 import logging
 
 logger = logging.getLogger(__name__)

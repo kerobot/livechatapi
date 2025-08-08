@@ -29,7 +29,7 @@ def youtube_livechat_get(video_id: str, page_token: Optional[str] = None):
         logger.warning(f"🚫 Invalid video_id: {video_id}")
         raise HTTPException(
             status_code=400,
-            detail="無効な動画IDだよ〜！11文字の英数字・ハイフン・アンダースコアのみOK",
+            detail="無効な動画IDです。11文字の英数字・ハイフン・アンダースコアのみ使用してください。",
         )
 
     cleaned_page_token = sanitize_page_token(page_token)
@@ -49,7 +49,7 @@ def _get_livechat(
             logger.warning(f"❌ Live chat not found for video: {video_id}")
             raise HTTPException(
                 status_code=404,
-                detail="ライブ配信が見つからないか、ライブチャットが無効だよ〜",
+                detail="ライブ配信が見つからないか、ライブチャットが無効です。",
             )
 
         data = youtube_service.get_chat_messages(live_chat_id, page_token)
