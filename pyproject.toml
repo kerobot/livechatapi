@@ -3,7 +3,7 @@ name = "livechatapi"
 version = "0.1.0"
 description = "YouTube Live Chat API - Real-time chat message retrieval service"
 authors = [
-    {name = "kerobot", email = "kerobot"}
+    {name = "kerobot"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
