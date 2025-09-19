@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from datetime import datetime
 from app.api import youtube_router
+from app.api.auth import router as auth_router
 from app.models.request import HealthCheckResponse
 from app.utils.logger import setup_logger
 from app.utils.exceptions import YouTubeAPIError, ValidationError
@@ -78,6 +79,7 @@ app.add_middleware(
 )
 
 app.include_router(youtube_router)
+app.include_router(auth_router)
 
 
 @app.get("/health", response_model=HealthCheckResponse)

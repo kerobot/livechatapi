@@ -7,6 +7,21 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 if not YOUTUBE_API_KEY:
     raise ValueError("YOUTUBE_API_KEY is not set in environment variables")
 
+# OAuth2設定
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+OAUTH_REDIRECT_URI = os.getenv(
+    "OAUTH_REDIRECT_URI", "http://localhost:8000/api/auth/callback"
+)
+
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    print(
+        "⚠️  OAuth2認証が無効: GOOGLE_CLIENT_ID と GOOGLE_CLIENT_SECRET を設定してください"
+    )
+
+# OAuth2スコープ
+YOUTUBE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
+
 # 環境設定
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 

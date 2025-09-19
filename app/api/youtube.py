@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException
 from typing import Optional
 from app.services.youtube import youtube_service
 from app.models.youtube import LiveChatMessageListResponse
-from app.models.request import LiveChatRequest
+from app.models.request import LiveChatRequest, PostChatMessageRequest
+from app.models.auth import PostChatMessageResponse
 from app.utils.validators import validate_youtube_video_id, sanitize_page_token
 from app.utils.exceptions import handle_youtube_api_error
 import logging
@@ -67,3 +68,32 @@ def _get_livechat(
     except Exception as e:
         logger.error(f"💥 Error - video_id: {video_id}, error: {str(e)}")
         raise handle_youtube_api_error(e)
+
+
+@router.post("/livechat/message", response_model=PostChatMessageResponse)
+def post_livechat_message(request: PostChatMessageRequest):
+    """
+    ライブチャットにメッセージを投稿するエンドポイント
+    """
+    try:
+        # 動画IDバリデーション
+        if not validate_youtube_video_id(request.video_id):
+            logger.warning(f"🚫 Invalid video_id: {request.video_id}")
+            raise HTTPException(
+                status_code=400,
+                detail="無効な動画IDです。11文字の英数字・ハイフン・アンダースコアのみ使用してください。",
+            )
+
+        result = youtube_service.post_chat_message(
+            request.video_id, request.message_text, request.access_token
+        )
+
+        return PostChatMessageResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"💥 Error posting chat message: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"チャット投稿に失敗しました: {str(e)}"
+        )
