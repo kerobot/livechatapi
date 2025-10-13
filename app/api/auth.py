@@ -1,6 +1,14 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from app.services.oauth2 import oauth2_service
-from app.models.auth import AuthUrlResponse, TokenRequest, TokenResponse
+from app.models.auth import (
+    AuthUrlResponse,
+    TokenRequest,
+    TokenResponse,
+    AuthUrlRequest,
+    AuthCallbackResponse,
+)
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,13 +19,16 @@ router = APIRouter(
 )
 
 
-@router.get("/url", response_model=AuthUrlResponse)
-def get_auth_url():
+@router.get("/login", response_model=AuthUrlResponse)
+def get_auth_url(
+    callback_url: Optional[str] = Query(None, description="認証後のリダイレクト先URL")
+):
     """
     Google OAuth2認証URLを生成するエンドポイント
+    callback_urlパラメータでリダイレクト先を指定可能
     """
     try:
-        auth_url, state = oauth2_service.generate_auth_url()
+        auth_url, state = oauth2_service.generate_auth_url(callback_url)
         return AuthUrlResponse(auth_url=auth_url, state=state)
     except Exception as e:
         logger.error(f"💥 認証URL生成エラー: {e}")
@@ -31,12 +42,36 @@ def auth_callback(
 ):
     """
     Google OAuth2認証コールバックエンドポイント
+    callback_urlが指定されている場合はリダイレクト、なければJSONレスポンス
     """
     try:
         token_info = oauth2_service.exchange_code_for_token(code, state)
+        callback_url = token_info.pop("callback_url", None)
+
+        # callback_urlがある場合はリダイレクト
+        if callback_url:
+            redirect_url = f"{callback_url}?access_token={token_info['access_token']}&status=success"
+            logger.info(f"🔄 Redirecting to: {callback_url}")
+            return RedirectResponse(url=redirect_url)
+
+        # callback_urlがない場合はJSONレスポンス
         return TokenResponse(**token_info)
+
     except Exception as e:
         logger.error(f"💥 認証コールバックエラー: {e}")
+
+        # エラー時もstateからcallback_urlを取り出してリダイレクトを試みる
+        try:
+            import json
+
+            state_data = json.loads(state)
+            callback_url = state_data.get("callback_url")
+            if callback_url:
+                error_url = f"{callback_url}?status=error&message={str(e)}"
+                return RedirectResponse(url=error_url)
+        except:
+            pass
+
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -46,7 +81,12 @@ def exchange_token(request: TokenRequest):
     認証コードをアクセストークンに交換するエンドポイント（POSTバージョン）
     """
     try:
+        if request.state is None:
+            raise HTTPException(status_code=400, detail="stateパラメータが必要です")
+
         token_info = oauth2_service.exchange_code_for_token(request.code, request.state)
+        # callback_urlは除外してレスポンス
+        token_info.pop("callback_url", None)
         return TokenResponse(**token_info)
     except Exception as e:
         logger.error(f"💥 トークン交換エラー: {e}")

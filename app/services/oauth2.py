@@ -28,11 +28,16 @@ class OAuth2Service:
                 "redirect_uris": [OAUTH_REDIRECT_URI],
             }
         }
-        self._active_states: Dict[str, bool] = {}  # セキュリティのためstateを管理
 
-    def generate_auth_url(self) -> tuple[str, str]:
+        self._active_states: Dict[str, Optional[str]] = (
+            {}
+        )  # セキュリティのためstateを管理（callback_url保存）
+
+    def generate_auth_url(self, callback_url: Optional[str] = None) -> tuple[str, str]:
         """
         OAuth2認証URLを生成
+        Args:
+            callback_url: 認証後のリダイレクト先URL（オプション）
         Returns:
             tuple: (認証URL, stateパラメータ)
         """
@@ -50,10 +55,17 @@ class OAuth2Service:
 
             # CSRF攻撃防止用のstateパラメータ生成
             state = secrets.token_urlsafe(32)
-            self._active_states[state] = True
+
+            # callback_urlがある場合はstateに含める（JSONエンコード）
+            state_data = {"csrf_token": state}
+            if callback_url:
+                state_data["callback_url"] = callback_url
+
+            state_json = json.dumps(state_data)
+            self._active_states[state] = callback_url  # callback_urlも保存
 
             auth_url, _ = flow.authorization_url(
-                access_type="offline", include_granted_scopes="true", state=state
+                access_type="offline", include_granted_scopes="true", state=state_json
             )
 
             logger.info(f"🔐 OAuth2認証URL生成完了: state={state}")
@@ -68,17 +80,26 @@ class OAuth2Service:
         認証コードをアクセストークンに交換
         Args:
             code: Google認証サーバーから返された認証コード
-            state: CSRF攻撃防止用のstateパラメータ
+            state: CSRF攻撃防止用のstateパラメータ（JSONエンコード済み）
         Returns:
-            dict: トークン情報
+            dict: トークン情報（callback_url含む場合もあり）
         """
-        # stateパラメータ検証
-        if state not in self._active_states:
-            logger.warning(f"🚫 不正なstateパラメータ: {state}")
+        try:
+            # stateをJSONデコード
+            state_data = json.loads(state)
+            csrf_token = state_data.get("csrf_token")
+            callback_url = state_data.get("callback_url")
+        except (json.JSONDecodeError, KeyError):
+            logger.warning(f"🚫 不正なstateフォーマット: {state}")
+            raise ValueError("不正なstateパラメータです。")
+
+        # CSRF トークン検証
+        if csrf_token not in self._active_states:
+            logger.warning(f"🚫 不正なCSRFトークン: {csrf_token}")
             raise ValueError("不正なstateパラメータです。")
 
         # 使用済みstateを削除
-        del self._active_states[state]
+        del self._active_states[csrf_token]
 
         try:
             flow = Flow.from_client_config(
@@ -96,6 +117,10 @@ class OAuth2Service:
                 "expires_in": 3600,  # Googleは通常1時間
                 "token_type": "Bearer",
             }
+
+            # callback_urlがある場合は追加
+            if callback_url:
+                token_info["callback_url"] = callback_url
 
             logger.info("✅ OAuth2トークン取得成功")
             return token_info

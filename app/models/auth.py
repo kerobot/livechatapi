@@ -2,6 +2,12 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 
+class AuthUrlRequest(BaseModel):
+    """OAuth2認証URL生成リクエスト"""
+
+    callback_url: Optional[str] = Field(None, description="認証後のリダイレクト先URL")
+
+
 class AuthUrlResponse(BaseModel):
     """OAuth2認証URL生成レスポンス"""
 
@@ -13,7 +19,9 @@ class TokenRequest(BaseModel):
     """OAuth2トークン取得リクエスト"""
 
     code: str = Field(..., description="認証コード")
-    state: str = Field(..., description="stateパラメータ")
+    state: Optional[str] = Field(
+        None, description="stateパラメータ（callback_url含む）"
+    )
 
 
 class TokenResponse(BaseModel):
@@ -23,6 +31,15 @@ class TokenResponse(BaseModel):
     refresh_token: Optional[str] = Field(None, description="リフレッシュトークン")
     expires_in: int = Field(..., description="トークンの有効期限（秒）")
     token_type: str = Field(default="Bearer", description="トークンタイプ")
+
+
+class AuthCallbackResponse(BaseModel):
+    """OAuth2認証コールバックレスポンス"""
+
+    status: str = Field(..., description="認証ステータス（success/error）")
+    message: str = Field(..., description="レスポンスメッセージ")
+    access_token: Optional[str] = Field(None, description="アクセストークン（成功時）")
+    redirect_url: Optional[str] = Field(None, description="リダイレクト先URL")
 
 
 class PostChatMessageRequest(BaseModel):
