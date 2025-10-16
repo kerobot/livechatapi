@@ -1,6 +1,6 @@
 # 🎬 YouTube Live Chat API
 
-YouTube ライブ配信のチャットメッセージをリアルタイムで取得する高性能なFastAPI Webアプリケーション
+YouTube ライブ配信のチャットメッセージをリアルタイムで取得・投稿する FastAPI Web アプリケーション
 
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-green.svg)](https://fastapi.tiangolo.com/)
@@ -10,19 +10,36 @@ YouTube ライブ配信のチャットメッセージをリアルタイムで取
 ## ✨ 特徴
 
 - 🚀 **高速**: FastAPIベースの非同期処理
-- 🛡️ **安全**: 入力バリデーション、レート制限、エラーハンドリング
+- 🔐 **OAuth2認証**: Google OAuth2によるセキュアな認証
+- 💬 **双方向チャット**: 読み取りと投稿の両方に対応
+- 🛡 **安全**: 入力バリデーション、CSRF対策、レート制限
 - 📊 **監視**: 構造化ログ、パフォーマンス計測
 - 🌐 **CORS対応**: フロントエンドとの連携
-- 🧪 **テスト完備**: 単体・統合テスト
+- 💉 **テスト完備**: 単体・統合テスト
 - 📈 **スケーラブル**: 環境別設定、プロダクション対応
 
 ## 🎯 主な機能
 
+### 📥 ライブチャット取得
 - YouTube Live Chat メッセージのリアルタイム取得
 - ページネーション対応（nextPageToken）
-- レート制限とリトライ機能
 - 詳細なユーザー情報（アバター、バッジなど）
+
+### 🔐 OAuth2認証
+- Google OAuth2 認証フロー
+- アクセストークン/リフレッシュトークンの管理
+- CSRF攻撃防止（stateパラメータ）
+- トークン有効性検証
+
+### 💬 ライブチャット投稿
+- OAuth2アクセストークンによる認証
+- ライブチャットへのメッセージ投稿
+- 投稿結果の詳細レスポンス
+
+### 🛡️ セキュリティ・その他
+- レート制限とリトライ機能
 - 自動ドキュメント生成（Swagger UI）
+- 包括的なエラーハンドリング
 
 ## 🚀 クイックスタート
 
@@ -31,6 +48,7 @@ YouTube ライブ配信のチャットメッセージをリアルタイムで取
 - Python 3.13+
 - Poetry 2.1+
 - YouTube Data API v3 キー
+- Google Cloud Console プロジェクト（OAuth2用）
 
 ### インストール
 
@@ -48,11 +66,16 @@ poetry shell
 
 ### 環境設定
 
-`.env` ファイルを作成してAPIキーを設定：
+`.env` ファイルを作成してAPIキーとOAuth2設定を設定：
 
 ```env
 # YouTube Data API v3 キー（必須）
 YOUTUBE_API_KEY=your_youtube_api_key_here
+
+# Google OAuth2設定（チャット投稿機能を使用する場合は必須）
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+OAUTH_REDIRECT_URI=http://localhost:8000/api/auth/callback
 
 # 環境設定（オプション）
 ENVIRONMENT=development
@@ -64,6 +87,17 @@ RATE_LIMIT_REQUESTS_PER_SECOND=0.5
 RATE_LIMIT_MAX_RETRIES=3
 RATE_LIMIT_BASE_DELAY=1.0
 ```
+
+### Google Cloud Console 設定
+
+チャット投稿機能を使用する場合は、Google Cloud Console での設定が必要です：
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成/選択
+2. YouTube Data API v3 を有効化
+3. OAuth2 クライアント ID を作成
+   - アプリケーションの種類: **ウェブアプリケーション**
+   - 承認済みのリダイレクト URI: `http://localhost:8000/api/auth/callback`
+4. Client ID と Client Secret を取得して `.env` に設定
 
 ### 実行
 
@@ -83,7 +117,34 @@ python -m uvicorn app.main:app --reload
 
 ## 📚 API使用方法
 
-### ライブチャット取得
+### 🔐 OAuth2認証
+
+#### 1. 認証URL取得
+
+```bash
+curl "http://127.0.0.1:8000/api/auth/login"
+```
+
+```javascript
+// JavaScript例
+const authResponse = await fetch('http://127.0.0.1:8000/api/auth/login');
+const authData = await authResponse.json();
+
+// ブラウザで認証URLを開く
+window.open(authData.auth_url, '_blank');
+```
+
+#### 2. 認証後のトークン取得
+
+認証完了後、コールバックURLでアクセストークンが自動的に取得されます。
+
+#### 3. トークン検証
+
+```bash
+curl "http://127.0.0.1:8000/api/auth/validate?access_token=YOUR_ACCESS_TOKEN"
+```
+
+### 📥 ライブチャット取得
 
 ```bash
 # GETリクエスト
@@ -100,7 +161,42 @@ const data = await response.json();
 console.log(data);
 ```
 
+### 💬 ライブチャット投稿
+
+```bash
+# POSTリクエスト
+curl -X POST "http://127.0.0.1:8000/api/youtube/livechat/message" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_id": "dQw4w9WgXcQ",
+    "message_text": "Hello from API!",
+    "access_token": "YOUR_ACCESS_TOKEN"
+  }'
+```
+
+```javascript
+// JavaScript例
+const postMessage = async (videoId, message, accessToken) => {
+  const response = await fetch('http://127.0.0.1:8000/api/youtube/livechat/message', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      video_id: videoId,
+      message_text: message,
+      access_token: accessToken,
+    }),
+  });
+  
+  return await response.json();
+};
+```
+```
+
 ### レスポンス例
+
+#### ライブチャット取得レスポンス
 
 ```json
 {
@@ -125,6 +221,27 @@ console.log(data);
       }
     }
   ]
+}
+```
+
+#### OAuth2認証URLレスポンス
+
+```json
+{
+  "auth_url": "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=...",
+  "state": "secure_random_state_token"
+}
+```
+
+#### ライブチャット投稿レスポンス
+
+```json
+{
+  "message_id": "posted_message_id",
+  "message_text": "Hello from API!",
+  "author_name": "Your Channel Name",
+  "published_at": "2025-10-16T10:30:00Z",
+  "success": true
 }
 ```
 
@@ -154,13 +271,16 @@ livechatapi/
 │   ├── config.py          # 設定管理
 │   ├── api/               # APIルーター
 │   │   ├── __init__.py
+│   │   ├── auth.py        # OAuth2認証エンドポイント
 │   │   └── youtube.py     # YouTube API エンドポイント
 │   ├── models/            # Pydanticモデル
 │   │   ├── __init__.py
+│   │   ├── auth.py        # OAuth2/認証モデル
 │   │   ├── request.py     # リクエストモデル
 │   │   └── youtube.py     # YouTubeレスポンスモデル
 │   ├── services/          # ビジネスロジック
 │   │   ├── __init__.py
+│   │   ├── oauth2.py      # OAuth2認証サービス
 │   │   └── youtube.py     # YouTube Data API クライアント
 │   └── utils/             # ユーティリティ
 │       ├── __init__.py
@@ -187,6 +307,9 @@ livechatapi/
 | 変数名 | デフォルト | 説明 |
 |--------|-----------|------|
 | `YOUTUBE_API_KEY` | **必須** | YouTube Data API v3 キー |
+| `GOOGLE_CLIENT_ID` | オプション | Google OAuth2 クライアントID（投稿機能用） |
+| `GOOGLE_CLIENT_SECRET` | オプション | Google OAuth2 クライアントシークレット（投稿機能用） |
+| `OAUTH_REDIRECT_URI` | `http://localhost:8000/api/auth/callback` | OAuth2リダイレクトURI |
 | `ENVIRONMENT` | `development` | 実行環境 (`development`, `staging`, `production`) |
 | `LOG_LEVEL` | `DEBUG` | ログレベル |
 | `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | CORS許可オリジン |
@@ -223,9 +346,22 @@ livechatapi/
 ### React連携例
 
 ```typescript
-// YouTube Live Chat Viewer Component
+// YouTube Live Chat Viewer with OAuth2 Component
 const [messages, setMessages] = useState([]);
+const [accessToken, setAccessToken] = useState<string | null>(null);
 
+// OAuth2認証
+const handleAuth = async () => {
+  const authResponse = await fetch('http://localhost:8000/api/auth/login');
+  const authData = await authResponse.json();
+  
+  // 新しいウィンドウで認証を実行
+  const authWindow = window.open(authData.auth_url, '_blank', 'width=500,height=600');
+  
+  // 認証完了を監視（実際の実装では適切なコールバック処理が必要）
+};
+
+// ライブチャット取得
 const fetchMessages = async (videoId: string, pageToken?: string) => {
   const url = new URL('http://localhost:8000/api/youtube/livechat');
   url.searchParams.set('video_id', videoId);
@@ -236,6 +372,29 @@ const fetchMessages = async (videoId: string, pageToken?: string) => {
   
   setMessages(prev => [...prev, ...data.items]);
   return data.nextPageToken;
+};
+
+// ライブチャット投稿
+const postMessage = async (videoId: string, message: string) => {
+  if (!accessToken) {
+    alert('認証が必要です');
+    return;
+  }
+  
+  const response = await fetch('http://localhost:8000/api/youtube/livechat/message', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      video_id: videoId,
+      message_text: message,
+      access_token: accessToken,
+    }),
+  });
+  
+  const result = await response.json();
+  console.log('Message posted:', result);
 };
 ```
 
@@ -248,11 +407,13 @@ const fetchMessages = async (videoId: string, pageToken?: string) => {
 
 ## 🛡️ セキュリティ
 
-- 入力値の厳密なバリデーション
-- SQLインジェクション対策（不要だがベストプラクティス）
-- レート制限によるDoS攻撃対策
-- CORS設定による跨サイトリクエスト制御
-- 詳細なログ記録
+- **OAuth2認証**: Google OAuth2による安全な認証
+- **CSRF対策**: stateパラメータによるCSRF攻撃防止
+- **スコープ制限**: 必要最小限のYouTube権限のみ要求
+- **入力値バリデーション**: 厳密なデータ検証
+- **レート制限**: DoS攻撃対策とAPI制限準拠
+- **CORS設定**: 跨サイトリクエスト制御
+- **詳細ログ記録**: セキュリティ監査用ログ
 
 ## 🐛 トラブルシューティング
 
@@ -264,17 +425,29 @@ const fetchMessages = async (videoId: string, pageToken?: string) => {
    ```
    → API キーのクォータを確認してください
 
-2. **CORS エラー**
+2. **OAuth2設定エラー**
+   ```
+   ❌ OAuth2設定が不完全です。GOOGLE_CLIENT_ID と GOOGLE_CLIENT_SECRET を設定してください。
+   ```
+   → Google Cloud Console で OAuth2 クライアントを作成し、環境変数を設定してください
+
+3. **CORS エラー**
    ```
    Access to fetch at 'http://localhost:8000' from origin 'http://localhost:3000' has been blocked by CORS policy
    ```
    → `.env` の `CORS_ORIGINS` を確認してください
 
-3. **ライブチャット未発見**
+4. **ライブチャット未発見**
    ```
    ライブ配信が見つからないか、ライブチャットが無効です
    ```
    → 動画IDが正しく、ライブ配信中であることを確認してください
+
+5. **OAuth2トークンエラー**
+   ```
+   💥 トークン取得に失敗しました: invalid_grant
+   ```
+   → 認証コードの有効期限切れ、またはリダイレクトURIの不一致を確認してください
 
 ### デバッグ
 
