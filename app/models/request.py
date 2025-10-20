@@ -54,3 +54,29 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., examples=["healthy"])
     message: str = Field(..., examples=["Live Chat API is running!"])
     timestamp: str = Field(..., examples=["2025-08-05T18:33:52+09:00"])
+
+
+class PostChatMessageRequest(BaseModel):
+    """ライブチャット投稿リクエスト（従来互換用）"""
+
+    video_id: str = Field(
+        ..., description="YouTube動画ID（11文字）", min_length=11, max_length=11
+    )
+    message_text: str = Field(
+        ..., min_length=1, max_length=200, description="投稿するメッセージ"
+    )
+    access_token: str = Field(..., description="OAuth2アクセストークン")
+
+    @field_validator("video_id")
+    @classmethod
+    def validate_video_id(cls, v):
+        if not v:
+            raise ValueError("video_idは必須です。")
+
+        pattern = r"^[a-zA-Z0-9_-]{11}$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                "video_idの形式が正しくありません。11文字の英数字・ハイフン・アンダースコアのみ利用可能です。"
+            )
+
+        return v

@@ -100,6 +100,63 @@ class YouTubeService:
             logger.error(f"💥 Failed to get chat messages for {live_chat_id}: {e}")
             raise
 
+    def post_chat_message(
+        self, video_id: str, message_text: str, access_token: str
+    ) -> dict:
+        """ライブチャットにメッセージを投稿"""
+        logger.info(f"📝 Posting chat message to video: {video_id}")
+
+        # まずライブチャットIDを取得
+        live_chat_id = self.get_live_chat_id(video_id)
+        if not live_chat_id:
+            raise Exception(f"ライブチャットが見つかりません: {video_id}")
+
+        self._wait_for_rate_limit()
+
+        url = "https://www.googleapis.com/youtube/v3/liveChat/messages"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        params = {
+            "part": "snippet",
+        }
+        body = {
+            "snippet": {
+                "liveChatId": live_chat_id,
+                "type": "textMessageEvent",
+                "textMessageDetails": {"messageText": message_text},
+            }
+        }
+
+        try:
+            import requests
+
+            response = requests.post(url, headers=headers, params=params, json=body)
+
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ Chat message posted successfully: {message_text}")
+                return {
+                    "message_id": result.get("id", ""),
+                    "message_text": message_text,
+                    "author_name": result.get("snippet", {}).get(
+                        "authorDisplayName", ""
+                    ),
+                    "published_at": result.get("snippet", {}).get("publishedAt", ""),
+                    "success": True,
+                }
+            else:
+                error_msg = (
+                    f"YouTube API error: {response.status_code} - {response.text}"
+                )
+                logger.error(f"💥 Failed to post chat message: {error_msg}")
+                raise Exception(error_msg)
+
+        except Exception as e:
+            logger.error(f"💥 Error posting chat message: {e}")
+            raise
+
 
 # サービスのシングルトンインスタンス
 youtube_service = YouTubeService()
